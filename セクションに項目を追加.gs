@@ -35,7 +35,7 @@ function addFieldToFormsInFolder() {
         for (let i = 0; i < items.length; i++) {
           if (items[i].getType() === FormApp.ItemType.PAGE_BREAK) {
             sectionCount++;
-            if (sectionCount === 2) {
+            if (sectionCount === 1) {  // 修正：セクションカウントを1に変更
               section2StartIndex = i;
               break;
             }
