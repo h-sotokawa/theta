@@ -1,9 +1,15 @@
 // フォルダIDを指定してください
 const FOLDER_ID = "<YOUR_FOLDER_ID>";
 
-function addFieldToFormsInFolder() {
+function main() {
+  const logSheet = createLogSheet();
+  addFieldToFormsInFolder(logSheet);
+}
+
+function addFieldToFormsInFolder(logSheet) {
   try {
-    Logger.log("スクリプトの実行を開始しました。");
+    logSheet.appendRow(["スクリプトの実行を開始しました。", new Date()]);
+    
     // 指定したフォルダを取得
     const folder = DriveApp.getFolderById(FOLDER_ID);
     const files = folder.getFilesByType(MimeType.GOOGLE_FORMS);
@@ -15,7 +21,7 @@ function addFieldToFormsInFolder() {
       const formId = file.getId();
       try {
         const form = FormApp.openById(formId);
-        Logger.log(`Form '${form.getTitle()}' の処理を開始します。`);
+        logSheet.appendRow([`Form '${form.getTitle()}' の処理を開始します。`, new Date()]);
 
         // フォームのセクションを取得
         const items = form.getItems();
@@ -35,21 +41,30 @@ function addFieldToFormsInFolder() {
 
         // セクション2が存在する場合に「預かり証No.」を追加
         if (section2Index !== -1) {
-          form.addTextItem()
+          const newItem = form.addTextItem()
               .setTitle("預かり証No.")
-              .setHelpText("預かり証の番号を入力してください。")
-              .moveToPageBreakItem(items[section2Index]);
-          Logger.log(`Form '${form.getTitle()}' に「預かり証No.」を追加しました。`);
+              .setHelpText("預かり証の番号を入力してください。");
+          form.moveItem(newItem.getIndex(), section2Index + 1);
+          logSheet.appendRow([`Form '${form.getTitle()}' に「預かり証No.」を追加しました。`, new Date()]);
         } else {
-          Logger.log(`Form '${form.getTitle()}' にはセクション2が見つかりませんでした。`);
+          logSheet.appendRow([`Form '${form.getTitle()}' にはセクション2が見つかりませんでした。`, new Date()]);
         }
       } catch (e) {
-        Logger.log(`Form ID '${formId}' の処理中にエラーが発生しました: ${e}`);
+        logSheet.appendRow([`Form ID '${formId}' の処理中にエラーが発生しました: ${e}`, new Date()]);
       }
     }
-    Logger.log(`対象のフォーム数: ${formCount}`);
-    Logger.log("スクリプトの実行を終了しました。");
+    logSheet.appendRow([`対象のフォーム数: ${formCount}`, new Date()]);
+    logSheet.appendRow(["スクリプトの実行を終了しました。", new Date()]);
   } catch (e) {
-    Logger.log(`スクリプト全体でエラーが発生しました: ${e}`);
+    logSheet.appendRow([`スクリプト全体でエラーが発生しました: ${e}`, new Date()]);
   }
-} 
+}
+
+function createLogSheet() {
+  const folder = DriveApp.getFolderById(FOLDER_ID);
+  const logFile = folder.createFile("LogSheet", "");
+  const logSpreadsheet = SpreadsheetApp.openById(logFile.getId());
+  const sheet = logSpreadsheet.getSheets()[0];
+  sheet.appendRow(["メッセージ", "タイムスタンプ"]);
+  return sheet;
+}
