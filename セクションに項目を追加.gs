@@ -24,30 +24,13 @@ function addFieldToFormsInFolder() {
 
         // フォームのセクションを取得
         const items = form.getItems();
-        let section2Index = -1;
-        let sectionCount = 0;
-        
-        // セクションブレークを数える
-        for (let i = 0; i < items.length; i++) {
-          if (items[i].getType() === FormApp.ItemType.PAGE_BREAK) {
-            sectionCount++;
-            if (sectionCount === 2) {
-              section2Index = i;
-              break;
-            }
-          }
-        }
+        let targetIndex = Math.min(items.length, 3); // 4番目のインデックスに移動するため、0ベースで3
 
-        // セクション2が存在する場合に「預かり証No.」を追加
-        if (section2Index !== -1) {
-          const newItem = form.addTextItem()
-              .setTitle("預かり証No.")
-              .setHelpText("預かり証の番号を入力してください。");
-          form.moveItem(newItem.getIndex(), section2Index + 2);
-          console.log(`Form '${form.getTitle()}' に「預かり証No.」を追加しました。`, new Date());
-        } else {
-          console.log(`Form '${form.getTitle()}' にはセクション2が見つかりませんでした。`, new Date());
-        }
+        const newItem = form.addTextItem()
+            .setTitle("預かり証No.")
+            .setHelpText("預かり証の番号を入力してください。");
+        form.moveItem(newItem.getIndex(), targetIndex);
+        console.log(`Form '${form.getTitle()}' の4番目に「預かり証No.」を追加しました。`, new Date());
       } catch (e) {
         console.log(`Form ID '${formId}' の処理中にエラーが発生しました: ${e}`, new Date());
       }
