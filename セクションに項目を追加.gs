@@ -24,13 +24,37 @@ function addFieldToFormsInFolder() {
 
         // フォームのセクションを取得
         const items = form.getItems();
-        let targetIndex = Math.min(items.length, 3); // 4番目のインデックスに移動するため、0ベースで3
+        let section2StartIndex = -1;
+        let section2EndIndex = -1;
+        let sectionCount = 0;
+        
+        // セクションブレークを数えることでセクション2の範囲を特定
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].getType() === FormApp.ItemType.PAGE_BREAK) {
+            sectionCount++;
+            if (sectionCount === 2) {
+              section2StartIndex = i;
+            } else if (sectionCount === 3) {
+              section2EndIndex = i;
+              break;
+            }
+          }
+        }
 
-        const newItem = form.addTextItem()
-            .setTitle("預かり証No.")
-            .setHelpText("預かり証の番号を入力してください。");
-        form.moveItem(newItem.getIndex(), targetIndex);
-        console.log(`Form '${form.getTitle()}' の4番目に「預かり証No.」を追加しました。`, new Date());
+        // セクション2が存在する場合に「預かり証No.」を追加
+        if (section2StartIndex !== -1) {
+          if (section2EndIndex === -1) {
+            // セクション3がない場合、セクション2の最後はフォーム全体の最後
+            section2EndIndex = items.length;
+          }
+          const newItem = form.addTextItem()
+              .setTitle("預かり証No.")
+              .setHelpText("預かり証の番号を入力してください。");
+          form.moveItem(newItem.getIndex(), section2EndIndex);
+          console.log(`Form '${form.getTitle()}' に「預かり証No.」を追加しました。`, new Date());
+        } else {
+          console.log(`Form '${form.getTitle()}' にはセクション2が見つかりませんでした。`, new Date());
+        }
       } catch (e) {
         console.log(`Form ID '${formId}' の処理中にエラーが発生しました: ${e}`, new Date());
       }
