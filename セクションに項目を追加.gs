@@ -43,8 +43,7 @@ function addFieldToFormsInFolder() {
           const newItem = form.addTextItem()
               .setTitle("預かり証No.")
               .setHelpText("預かり証の番号を入力してください。");
-          const targetPageBreakItem = items[section2Index];
-          form.moveItem(newItem.getIndex(), targetPageBreakItem.getIndex() + 1);
+          form.moveItem(newItem.getIndex(), section2Index + 2);
           console.log(`Form '${form.getTitle()}' に「預かり証No.」を追加しました。`, new Date());
         } else {
           console.log(`Form '${form.getTitle()}' にはセクション2が見つかりませんでした。`, new Date());
