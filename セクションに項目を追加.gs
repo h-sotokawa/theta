@@ -1,9 +1,13 @@
 // フォルダIDを指定してください
 const FOLDER_ID = "<YOUR_FOLDER_ID>";
 
-function addFieldToFormsInFolder() {
+function main() {
+  const logSheet = createLogSheet();
+  addFieldToFormsInFolder(logSheet);
+}
+
+function addFieldToFormsInFolder(logSheet) {
   try {
-    const logSheet = createLogSheet();
     logSheet.appendRow(["スクリプトの実行を開始しました。", new Date()]);
     
     // 指定したフォルダを取得
@@ -52,7 +56,6 @@ function addFieldToFormsInFolder() {
     logSheet.appendRow([`対象のフォーム数: ${formCount}`, new Date()]);
     logSheet.appendRow(["スクリプトの実行を終了しました。", new Date()]);
   } catch (e) {
-    const logSheet = createLogSheet();
     logSheet.appendRow([`スクリプト全体でエラーが発生しました: ${e}`, new Date()]);
   }
 }
