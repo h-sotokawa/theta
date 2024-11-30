@@ -55,7 +55,8 @@ function addFieldToFormsInFolder() {
           // 新しい質問を追加し、セクション2の最後に移動
           const newItem = form.addTextItem()
               .setTitle("預かり証No.")
-              .setHelpText("預かり証の番号を入力してください。");
+              .setHelpText("預かり証の番号を入力してください。")
+              .setRequired(true);  // 質問を必須に設定
           form.moveItem(newItem.getIndex(), section2EndIndex + 1);
           console.log(`Form '${form.getTitle()}' に「預かり証No.」を追加しました。`, new Date());
         } else {
