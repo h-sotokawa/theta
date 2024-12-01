@@ -82,17 +82,28 @@ function transferToSpreadsheetB(rows) {
     }
 
     if (targetRow !== -1) {
+      // 日付をフォーマットする関数
+      const formatDate = (date) => {
+        if (Object.prototype.toString.call(date) === '[object Date]') {
+          const year = date.getFullYear();
+          const month = ('0' + (date.getMonth() + 1)).slice(-2);
+          const day = ('0' + date.getDate()).slice(-2);
+          return `${year}/${month}/${day}`;
+        }
+        return date; // 日付以外のデータはそのまま返す
+      };
+      
       // 各列にデータを転記
       firstSheetB.getRange(targetRow, 1).setValue(rowData[6] || ''); // A列にリスト6番目の内容を転記
-      firstSheetB.getRange(targetRow, 7).setValue(rowData[2] || ''); // G列にリスト2番目の内容を転記
-      firstSheetB.getRange(targetRow, 8).setValue(rowData[3] || ''); // H列にリスト3番目の内容を転記
-      firstSheetB.getRange(targetRow, 9).setValue(rowData[5] || ''); // I列にリスト5番目の内容を転記
-      firstSheetB.getRange(targetRow, 11).setValue(rowData[8] || ''); // K列にリスト8番目の内容を転記
-      firstSheetB.getRange(targetRow, 12).setValue(rowData[7] || ''); // L列にリスト9番目の内容を転記
+      firstSheetB.getRange(targetRow,11).setValue(rowData[2] || ''); // K列にリスト2番目の内容を転記
+      firstSheetB.getRange(targetRow, 12).setValue(rowData[3] || ''); // L列にリスト3番目の内容を転記
+      firstSheetB.getRange(targetRow, 13).setValue(rowData[5] || ''); // M列にリスト5番目の内容を転記
+      firstSheetB.getRange(targetRow, 15).setValue(rowData[8] || ''); // O列にリスト8番目の内容を転記
+      firstSheetB.getRange(targetRow, 16).setValue(rowData[7] || ''); // P列にリスト9番目の内容を転記
 
-      // G列の内容が"代替貸出"の場合、J列に"有"を入力
+      // K列の内容が"代替貸出"の場合、N列に"有"を入力
       if (rowData[2] === "代替貸出") {
-        firstSheetB.getRange(targetRow, 10).setValue("有"); // J列に"有"を転記
+        firstSheetB.getRange(targetRow, 14).setValue("有"); // J列に"有"を転記
       }
     }
   }
