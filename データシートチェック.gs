@@ -13,7 +13,7 @@ function organizeDataSheets() {
   var sheets = ss.getSheets().filter(sheet => sheet.getName().includes(PREFIX));
 
   var correctHeaders = ["タイムスタンプ", "メールアドレス", "ステータス", "顧客名", "預かり証No.", "備考"];
-  var logSheet = ensureLogSheet(ss, 'organize_datasheets_log');
+  var logSheet = ensureLogSheet(ss, 'organize_dataSheets_log');
 
   sheets.forEach(sheet => {
     if (sheet.getLastRow() === 0 || sheet.getLastColumn() === 0) {
