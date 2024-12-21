@@ -1,33 +1,42 @@
 function checkAndFixColumnOrder_main() {
   const scriptProperties = PropertiesService.getScriptProperties();
   const spreadsheetId = scriptProperties.getProperty("SPREADSHEET_ID_SOURCE");
+  const prefix = scriptProperties.getProperty("PREFIX") || "";
   if (!spreadsheetId) {
     throw new Error("スクリプトプロパティに 'SPREADSHEET_ID_SOURCE' が設定されていません。");
   }
 
   const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
-  const sheet = spreadsheet.getActiveSheet();
-  const logSheet = spreadsheet.getSheetByName("header_check_on_main_sheet_log") || createLogSheet(spreadsheet);
+  const sheets = spreadsheet.getSheets();
+  const logSheet = spreadsheet.getSheetByName("header_check_on_data_sheet_log") || createLogSheet(spreadsheet);
   const correctColumnOrder = [
-    "機種名", "資産管理番号", "拠点管理番号", "ステータス", 
-    "顧客名", "ユーザー機シリアル", "日付", 
-    "担当者", "備考", "お預かり証No."
+    "タイムスタンプ", "メールアドレス", "ステータス", "顧客名", 
+    "預かり証No.", "備考"
   ];
 
   // ログシートのローテーション
   rotateLog(logSheet);
 
-  // 現在のヘッダーを取得
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  // 対象のシートに対して処理を実行
+  sheets.forEach(sheet => {
+    if (sheet.getName().startsWith(prefix)) {
+      const lastColumn = sheet.getLastColumn();
+      if (lastColumn === 0) {
+        logMessage(logSheet, `シート「${sheet.getName()}」は空のため、処理をスキップします。`);
+        return; // 空のシートはスキップ
+      }
 
-  if (!arraysEqual(headers, correctColumnOrder)) {
-    logMessage(logSheet, `シート「${sheet.getName()}」の列の順番を修正します。`);
-    logColumnChanges(logSheet, headers, correctColumnOrder);
-    rearrangeColumns(sheet, headers, correctColumnOrder);
-    logMessage(logSheet, `シート「${sheet.getName()}」の列の順番を「${correctColumnOrder.join(', ')}」に整頓しました。`);
-  } else {
-    logMessage(logSheet, `シート「${sheet.getName()}」の列の順番は正しいです。`);
-  }
+      const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+      if (!arraysEqual(headers, correctColumnOrder)) {
+        logMessage(logSheet, `シート「${sheet.getName()}」の列の順番を修正します。`);
+        logColumnChanges(logSheet, headers, correctColumnOrder);
+        rearrangeColumns(sheet, headers, correctColumnOrder);
+        logMessage(logSheet, `シート「${sheet.getName()}」の列の順番を「${correctColumnOrder.join(', ')}」に整頓しました。`);
+      } else {
+        logMessage(logSheet, `シート「${sheet.getName()}」の列の順番は正しいです。`);
+      }
+    }
+  });
 }
 
 /**
@@ -99,7 +108,7 @@ function logColumnChanges(logSheet, headers, correctOrder) {
  * @return {Sheet} 作成されたログシート
  */
 function createLogSheet(spreadsheet) {
-  const logSheet = spreadsheet.insertSheet("header_check_on_main_sheet_log");
+  const logSheet = spreadsheet.insertSheet("header_check_on_data_sheet_log");
   logSheet.appendRow(["タイムスタンプ", "メッセージ"]);
   return logSheet;
 }

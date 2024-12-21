@@ -2,10 +2,10 @@
 function organizeDataSheets() {
   var scriptProperties = PropertiesService.getScriptProperties();
   var PREFIX = scriptProperties.getProperty('PREFIX');
-  var SPREADSHEET_ID = scriptProperties.getProperty('SPREADSHEET_ID_SOURCE');
+  var SPREADSHEET_ID = scriptProperties.getProperty('SPREADSHEET_ID');
 
   if (!PREFIX || !SPREADSHEET_ID) {
-    Logger.log("PREFIXまたはSPREADSHEET_ID_SOURCEが指定されていません。");
+    Logger.log("PREFIXまたはSPREADSHEET_IDが指定されていません。");
     return;
   }
 
@@ -13,7 +13,7 @@ function organizeDataSheets() {
   var sheets = ss.getSheets().filter(sheet => sheet.getName().includes(PREFIX));
 
   var correctHeaders = ["タイムスタンプ", "メールアドレス", "ステータス", "顧客名", "預かり証No.", "備考"];
-  var logSheet = ensureLogSheet(ss, 'organize_dataSheets_log');
+  var logSheet = ensureLogSheet(ss, 'organize_datasheets_log');
 
   sheets.forEach(sheet => {
     if (sheet.getLastRow() === 0 || sheet.getLastColumn() === 0) {

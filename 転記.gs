@@ -1,41 +1,35 @@
 function transferDataMain() {
   try {
-    // 転記元シートからデータをリスト化
     const rows = listColumnData();
-    
-    // rowsが空でないかをチェックし、空の場合は転記をスキップ
+
     if (rows.length === 0) {
       Logger.log('転記元データが存在しません。転記処理をスキップします。');
-      sendLogNotification();
+      writeLogToSheet('転記元データが存在しません。転記処理をスキップします。');
       return;
     }
 
-    // rowsのすべての内容の資産管理番号をログに記録
     Logger.log('転記元データの資産管理番号一覧:');
     rows.forEach((row, index) => {
       Logger.log(`行 ${index + 1}: 資産管理番号: ${row[0]}`);
     });
+    writeLogToSheet(`転記元データの資産管理番号一覧: ${rows.map(row => row[0]).join(', ')}`);
 
-    // 転記先シートにデータを転記
     const unprocessedRows = transferToSpreadsheetDestination(rows);
-
-    // 転記元と転記先の差異をログに出力
     logDifferences(rows);
 
-    // 処理した行数と実際の行数が一致しない場合、未処理の行をログに残す
     if (unprocessedRows.length > 0) {
       Logger.log(`未処理の行数: ${unprocessedRows.length}`);
       unprocessedRows.forEach((row, index) => {
         Logger.log(`未処理の行 ${index + 1}: 資産管理番号: ${row[0]}, 理由: 対応する転記先の行が見つかりませんでした。`);
       });
+      writeLogToSheet(`未処理の行数: ${unprocessedRows.length}`);
     } else {
       Logger.log('すべての行が正常に処理されました。');
+      writeLogToSheet('すべての行が正常に処理されました。');
     }
-
-    // ログをメールで送信
-    sendLogNotification();
   } catch (error) {
     Logger.log('エラーが発生しました: ' + error.message + '\nスタックトレース: ' + error.stack);
+    writeLogToSheet('エラーが発生しました: ' + error.message + '\nスタックトレース: ' + error.stack);
     sendErrorNotification(error);
   }
 }
@@ -212,23 +206,49 @@ function logDifferences(rows) {
   });
 }
 
-function sendLogNotification() {
+function writeLogToSheet(logMessage) {
   const scriptProperties = PropertiesService.getScriptProperties();
-  const recipient = scriptProperties.getProperty('NOTIFICATION_EMAIL');
-  const location = scriptProperties.getProperty('LOCATION_MAPPING');
+  const spreadsheetSourceId = scriptProperties.getProperty('SPREADSHEET_ID_SOURCE');
 
-  if (!recipient) {
-    throw new Error('ログメール通知先のメールアドレスが設定されていません。スクリプトプロパティに「NOTIFICATION_EMAIL」を正しく設定してください。');
+  if (!spreadsheetSourceId) {
+    throw new Error('スプレッドシート(SPREADSHEET_ID_SOURCE)のIDが設定されていません。');
   }
 
-  const log = Logger.getLog();
-  const subject = '転記処理スクリプト実行結果通知：' + location;
-  const body = 'スクリプトの実行結果を通知します:\n' + log;
-  MailApp.sendEmail(recipient, subject, body);
+  const spreadsheetSource = SpreadsheetApp.openById(spreadsheetSourceId);
+  let logSheet = spreadsheetSource.getSheetByName('transferDataMain_log');
+
+  if (!logSheet) {
+    logSheet = spreadsheetSource.insertSheet('transferDataMain_log');
+    logSheet.appendRow(['日時', 'ログメッセージ']);
+  }
+
+  const now = new Date();
+  logSheet.appendRow([now.toLocaleString(), logMessage]);
+
+  rotateLog(logSheet);
+}
+
+function rotateLog(sheet) {
+  const maxYears = 3;
+  const today = new Date();
+  const cutoffDate = new Date(today.getFullYear() - maxYears, today.getMonth(), today.getDate());
+
+  const data = sheet.getDataRange().getValues();
+  const headers = data.shift();
+
+  const filteredData = data.filter(row => {
+    const logDate = new Date(row[0]);
+    return logDate >= cutoffDate;
+  });
+
+  sheet.clear();
+  sheet.appendRow(headers);
+  if (filteredData.length > 0) {
+    sheet.getRange(2, 1, filteredData.length, filteredData[0].length).setValues(filteredData);
+  }
 }
 
 function sendErrorNotification(error) {
-  // スクリプトプロパティからエラーメールの通知先を取得
   const scriptProperties = PropertiesService.getScriptProperties();
   const recipient = scriptProperties.getProperty('ERROR_NOTIFICATION_EMAIL');
   const location = scriptProperties.getProperty('LOCATION_MAPPING');
@@ -237,7 +257,6 @@ function sendErrorNotification(error) {
     throw new Error('エラーメール通知先のメールアドレスが設定されていません。スクリプトプロパティに「ERROR_NOTIFICATION_EMAIL」を正しく設定してください。');
   }
 
-  // エラーメールを送信
   const subject = '転記処理スクリプトエラー通知：'+location;
   const body = 'エラーが発生しました: ' + error.message + '\nスタックトレース: ' + error.stack;
   MailApp.sendEmail(recipient, subject, body);
