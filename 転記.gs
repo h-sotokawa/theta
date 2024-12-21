@@ -169,6 +169,7 @@ function transferToSpreadsheetDestination(rows) {
         destinationSheet.getRange(targetRow, 12).clearContent(); // L列の内容を削除
         destinationSheet.getRange(targetRow, 13).clearContent(); // M列の内容を削除
         destinationSheet.getRange(targetRow, 15).clearContent(); // O列の内容を削除
+        destinationSheet.getRange(targetRow, 14).clearContent(); // N列の内容を削除
       }
       processedRowCount++;
     } else {
