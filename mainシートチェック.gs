@@ -1,8 +1,8 @@
 function checkAndFixColumnOrder_main() {
   const scriptProperties = PropertiesService.getScriptProperties();
-  const spreadsheetId = scriptProperties.getProperty("SPREADSHEET_ID");
+  const spreadsheetId = scriptProperties.getProperty("SPREADSHEET_ID_SOURCE");
   if (!spreadsheetId) {
-    throw new Error("スクリプトプロパティに 'SPREADSHEET_ID' が設定されていません。");
+    throw new Error("スクリプトプロパティに 'SPREADSHEET_ID_SOURCE' が設定されていません。");
   }
 
   const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
