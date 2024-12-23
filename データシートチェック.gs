@@ -2,10 +2,10 @@
 function organizeDataSheets() {
   var scriptProperties = PropertiesService.getScriptProperties();
   var PREFIX = scriptProperties.getProperty('PREFIX');
-  var SPREADSHEET_ID = scriptProperties.getProperty('SPREADSHEET_ID');
+  var SPREADSHEET_ID = scriptProperties.getProperty('SPREADSHEET_ID_SOURCE');
 
   if (!PREFIX || !SPREADSHEET_ID) {
-    Logger.log("PREFIXまたはSPREADSHEET_IDが指定されていません。");
+    Logger.log("PREFIXまたはSPREADSHEET_ID_SOURCEが指定されていません。");
     return;
   }
 
