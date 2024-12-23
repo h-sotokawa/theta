@@ -5,7 +5,7 @@ function onOpen() {
   menu.addToUi();                            // メニューをUiクラスに追加する
 }
 
-function main() {
+function dataSheetColumnCheckMain() {
 
   const prefix = PropertiesService.getScriptProperties().getProperty("PREFIX")?.split(",");
   console.log(prefix);
