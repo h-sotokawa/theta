@@ -31,7 +31,7 @@ function onButtonClick() {
 
 function createGoogleFormWithEmailCollection(formTitle, folderId, spreadsheetId) {
   if (!formTitle || !folderId || !spreadsheetId) {
-    logToSheet(SpreadsheetApp.getActiveSpreadsheet(), 'フォームタイトル、フォルダID、またはスプレッドシートIDが設定されていません。FORM_TITLE、FOLDER_ID、SPREADSHEET_IDを設定してください。FORM_TITLEはA1セルに入力(端末の名前になります)、フォルダーIDはフォームを作成したいドライブのフォルダのURL末尾30文字程度の英文字をA2セルに入力してください');
+    logToSheet(SpreadsheetApp.getActiveSpreadsheet(), 'フォームタイトル、フォルダID、またはスプレッドシートIDが設定されていません。FORM_TITLE、FOLDER_ID、SPREADSHEET_IDを設定してください。FORM_TITLEはC2セルに入力(端末の名前になります)、フォルダーIDはフォームを作成したいドライブのフォルダのURL末尾30文字程度の英文字をC3セルに入力してください');
     return;
   }
   
