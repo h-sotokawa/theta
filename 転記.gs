@@ -158,6 +158,7 @@ function transferToSpreadsheetDestination(rows) {
         destinationSheet.getRange(targetRow, 12).setValue(rowData[3] || ''); // L列にリスト3番目の内容を転記
         destinationSheet.getRange(targetRow, 13).setValue(rowData[5] || ''); // M列にリスト5番目の内容を転記
         destinationSheet.getRange(targetRow, 15).setValue(rowData[8] || ''); // O列にリスト8番目の内容を転記
+        destinationSheet.getRange(targetRow, 16).setValue(rowData[7] || ''); // P列にリスト7番目の内容を転記
         destinationSheet.getRange(targetRow, 14).setValue("有"); // N列に"有"を転記
       } else {
         destinationSheet.getRange(targetRow, 12).clearContent(); // L列の内容を削除
