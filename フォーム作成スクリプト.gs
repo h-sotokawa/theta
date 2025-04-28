@@ -143,14 +143,15 @@ function addLendSectionQuestions(form) {
       .setRequired(true);
   form.addTextItem()
       .setTitle('預かり機の製造番号')
-      .setRequired(true);
-  form.addTextItem()
-      .setTitle('お預かり証No.')
-      .setRequired(true);
+      .setRequired(false);
   form.addTextItem()
       .setTitle('備考')
       .setRequired(false);
-  
+  form.addTextItem()
+      .setTitle('お預かり証No.')
+      .setHelpText('お預かり証No.を入力してください。(お預かり証がない場合は省略)') 
+      .setRequired(false);
+
   // 貸出セクションの最後で送信するように設定
   form.addPageBreakItem().setGoToPage(FormApp.PageNavigationType.SUBMIT);
 }
