@@ -133,48 +133,104 @@ function transferToSpreadsheetDestination(rows) {
     Logger.log(`行 ${index + 4}: ${value[0]}`);
   });
 
-  // 転記先シートのB列をハッシュマップに変換して、高速な検索を可能にする
-  const valuesBMap = new Map(); // 使用する理由: Mapを使うことで検索時間がO(1)に短縮され、パフォーマンスが向上するため
+  // 転記先シートのB列をMapに変換
+  const valuesBMap = new Map();
   valuesB.forEach((value, index) => {
     if (value[0]) {
-      valuesBMap.set(value[0], index + 4); // シート上の行番号は4から始まる
+      valuesBMap.set(value[0], index + 4);
     }
   });
 
-  let unprocessedRows = []; // 処理されなかった行を格納する配列
+  // 転記元の資産管理番号をMapに変換
+  const sourceAssetNumbers = new Map();
+  rows.forEach(row => {
+    if (row[0]) {
+      sourceAssetNumbers.set(row[0], true);
+    }
+  });
+
+  let unprocessedRows = [];
   let processedRowCount = 0;
+  let newRows = [];
+  let deletedRows = [];
 
   // 転記元の各行について処理
   for (const rowData of rows) {
-    const assetNumber = rowData[0]; // 資産管理番号（B列の値）
-    const targetRow = valuesBMap.get(assetNumber); // ハッシュマップから行番号を取得
+    const assetNumber = rowData[0];
+    const targetRow = valuesBMap.get(assetNumber);
 
-    if (targetRow !== undefined) { // 修正: targetRowがundefinedでないことを確認
-      // 各列にデータを転記
-      destinationSheet.getRange(targetRow, 1).setValue(rowData[6] || ''); // A列にリスト6番目の内容を転記
-      destinationSheet.getRange(targetRow, 11).setValue(rowData[2] || ''); // K列にリスト2番目の内容を転記
+    if (targetRow !== undefined) {
+      // 既存の行に対する転記処理
+      destinationSheet.getRange(targetRow, 1).setValue(rowData[6] || '');
+      destinationSheet.getRange(targetRow, 11).setValue(rowData[2] || '');
 
       if (rowData[2] === "代替貸出") {
-        destinationSheet.getRange(targetRow, 12).setValue(rowData[3] || ''); // L列にリスト3番目の内容を転記
-        destinationSheet.getRange(targetRow, 13).setValue(rowData[5] || ''); // M列にリスト5番目の内容を転記
-        destinationSheet.getRange(targetRow, 15).setValue(rowData[8] || ''); // O列にリスト8番目の内容を転記
-        destinationSheet.getRange(targetRow, 16).setValue(rowData[7] || ''); // P列にリスト7番目の内容を転記
-        destinationSheet.getRange(targetRow, 14).setValue("有"); // N列に"有"を転記
+        destinationSheet.getRange(targetRow, 12).setValue(rowData[3] || '');
+        destinationSheet.getRange(targetRow, 13).setValue(rowData[5] || '');
+        destinationSheet.getRange(targetRow, 15).setValue(rowData[8] || '');
+        destinationSheet.getRange(targetRow, 16).setValue(rowData[7] || '');
+        destinationSheet.getRange(targetRow, 14).setValue("有");
       } else {
-        destinationSheet.getRange(targetRow, 12).clearContent(); // L列の内容を削除
-        destinationSheet.getRange(targetRow, 13).clearContent(); // M列の内容を削除
-        destinationSheet.getRange(targetRow, 15).clearContent(); // O列の内容を削除
-        destinationSheet.getRange(targetRow, 14).clearContent(); // N列の内容を削除
+        destinationSheet.getRange(targetRow, 12).clearContent();
+        destinationSheet.getRange(targetRow, 13).clearContent();
+        destinationSheet.getRange(targetRow, 15).clearContent();
+        destinationSheet.getRange(targetRow, 14).clearContent();
       }
       processedRowCount++;
     } else {
-      // 転記できなかった行を記録
-      Logger.log(`未処理の資産管理番号: ${assetNumber}`); // 追加: 未処理の行をログに出力
-      unprocessedRows.push(rowData);
+      // 新しい代替機のデータを追加
+      newRows.push(rowData);
     }
   }
 
-  // 処理されなかった行を返す
+  // 転記先に存在するが転記元に存在しない行を削除
+  valuesB.forEach((value, index) => {
+    const assetNumber = value[0];
+    if (assetNumber && !sourceAssetNumbers.has(assetNumber)) {
+      deletedRows.push({
+        row: index + 4,
+        assetNumber: assetNumber
+      });
+    }
+  });
+
+  // 削除する行を逆順にソート（下から削除することで行番号のずれを防ぐ）
+  deletedRows.sort((a, b) => b.row - a.row);
+
+  // 行を削除
+  deletedRows.forEach(item => {
+    destinationSheet.deleteRow(item.row);
+    Logger.log(`削除された行: 資産管理番号 ${item.assetNumber} (行 ${item.row})`);
+    writeLogToSheet(`削除された行: 資産管理番号 ${item.assetNumber} (行 ${item.row})`);
+  });
+
+  // 新しい代替機のデータを追加
+  if (newRows.length > 0) {
+    const lastRow = destinationSheet.getLastRow();
+    const startRow = lastRow + 1;
+    
+    newRows.forEach((rowData, index) => {
+      const currentRow = startRow + index;
+      
+      // 新しい行にデータを転記
+      destinationSheet.getRange(currentRow, 1).setValue(rowData[6] || '');
+      destinationSheet.getRange(currentRow, 2).setValue(rowData[0]); // 資産管理番号
+      destinationSheet.getRange(currentRow, 11).setValue(rowData[2] || '');
+
+      if (rowData[2] === "代替貸出") {
+        destinationSheet.getRange(currentRow, 12).setValue(rowData[3] || '');
+        destinationSheet.getRange(currentRow, 13).setValue(rowData[5] || '');
+        destinationSheet.getRange(currentRow, 15).setValue(rowData[8] || '');
+        destinationSheet.getRange(currentRow, 16).setValue(rowData[7] || '');
+        destinationSheet.getRange(currentRow, 14).setValue("有");
+      }
+
+      // 新しい行の追加をログに記録
+      Logger.log(`新しい代替機を追加しました: 資産管理番号 ${rowData[0]}`);
+      writeLogToSheet(`新しい代替機を追加しました: 資産管理番号 ${rowData[0]}`);
+    });
+  }
+
   return unprocessedRows;
 }
 
