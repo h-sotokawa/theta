@@ -67,6 +67,12 @@ function listColumnData() {
     }
   }
 
+  // デバッグ用のログを追加
+  Logger.log('転記元データの構造:');
+  rows.forEach((row, index) => {
+    Logger.log(`行 ${index + 1}: ${JSON.stringify(row)}`);
+  });
+
   return rows;
 }
 
@@ -160,22 +166,34 @@ function transferToSpreadsheetDestination(rows) {
     const targetRow = valuesBMap.get(assetNumber);
 
     if (targetRow !== undefined) {
-      // 既存の行に対する転記処理
-      destinationSheet.getRange(targetRow, 1).setValue(rowData[6] || '');
-      destinationSheet.getRange(targetRow, 11).setValue(rowData[2] || '');
+      // デバッグログを追加
+      Logger.log(`既存データの上書き処理開始: 資産管理番号=${assetNumber}, 行番号=${targetRow}`);
+      Logger.log(`転記元データ: ステータス=${rowData[2]}, 日付=${rowData[5]}, 担当者=${rowData[6]}, 備考=${rowData[7]}`);
 
+      // 既存の行に対する転記処理（必要な列のみ更新）
       if (rowData[2] === "代替貸出") {
-        destinationSheet.getRange(targetRow, 12).setValue(rowData[3] || '');
-        destinationSheet.getRange(targetRow, 13).setValue(rowData[5] || '');
-        destinationSheet.getRange(targetRow, 15).setValue(rowData[8] || '');
-        destinationSheet.getRange(targetRow, 16).setValue(rowData[7] || '');
-        destinationSheet.getRange(targetRow, 14).setValue("有");
+        // 代替貸出の場合
+        destinationSheet.getRange(targetRow, 1).setValue(rowData[6] || '');  // A列：担当者
+        destinationSheet.getRange(targetRow, 11).setValue(rowData[2] || ''); // K列：ステータス
+        destinationSheet.getRange(targetRow, 12).setValue(rowData[3] || ''); // L列：貸出先
+        destinationSheet.getRange(targetRow, 13).setValue(rowData[5] || ''); // M列：貸出日
+        destinationSheet.getRange(targetRow, 15).setValue(rowData[8] || ''); // O列：お預かり証No.
+        destinationSheet.getRange(targetRow, 16).setValue(rowData[7] || ''); // P列：備考
+        destinationSheet.getRange(targetRow, 14).setValue(rowData[8] ? "有" : ""); // N列：ユーザー機有
       } else {
-        destinationSheet.getRange(targetRow, 12).clearContent();
-        destinationSheet.getRange(targetRow, 13).clearContent();
-        destinationSheet.getRange(targetRow, 15).clearContent();
-        destinationSheet.getRange(targetRow, 14).clearContent();
+        // 代替貸出でない場合
+        destinationSheet.getRange(targetRow, 1).setValue(rowData[6] || '');  // A列：担当者
+        destinationSheet.getRange(targetRow, 11).setValue(rowData[2] || ''); // K列：ステータス
+        destinationSheet.getRange(targetRow, 16).setValue(rowData[7] || ''); // P列：備考
+        // 代替機関連の列をクリア
+        destinationSheet.getRange(targetRow, 12).clearContent();  // L列：顧客名
+        destinationSheet.getRange(targetRow, 13).clearContent();  // M列：貸出先
+        destinationSheet.getRange(targetRow, 15).clearContent();  // O列：お預かり証No.
+        destinationSheet.getRange(targetRow, 14).clearContent();  // N列：ユーザー機有
       }
+
+      // デバッグログを追加
+      Logger.log(`既存データの上書き処理完了: 資産管理番号=${assetNumber}`);
       processedRowCount++;
     } else {
       // 新しい代替機のデータを追加
@@ -222,7 +240,7 @@ function transferToSpreadsheetDestination(rows) {
         destinationSheet.getRange(currentRow, 13).setValue(rowData[5] || '');
         destinationSheet.getRange(currentRow, 15).setValue(rowData[8] || '');
         destinationSheet.getRange(currentRow, 16).setValue(rowData[7] || '');
-        destinationSheet.getRange(currentRow, 14).setValue("有");
+        destinationSheet.getRange(currentRow, 14).setValue(rowData[8] ? "有" : "");
       }
 
       // 新しい行の追加をログに記録
@@ -230,6 +248,12 @@ function transferToSpreadsheetDestination(rows) {
       writeLogToSheet(`新しい代替機を追加しました: 資産管理番号 ${rowData[0]}`);
     });
   }
+
+  // デバッグ用のログを追加
+  Logger.log('転記処理時のデータ構造:');
+  rows.forEach((row, index) => {
+    Logger.log(`行 ${index + 1}: ステータス=${row[2]}, P列データ=${row[7]}`);
+  });
 
   return unprocessedRows;
 }
