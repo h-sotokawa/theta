@@ -133,7 +133,7 @@ function transferToSpreadsheetDestination(rows) {
     Logger.log(`行 ${index + 4}: ${value[0]}`);
   });
 
-  // 転記先シートのB列をハッシュマップに変換して、高速な検索を可能にする
+  // 転記先シートのB列をMapに変換
   const valuesBMap = new Map();
   valuesB.forEach((value, index) => {
     if (value[0]) {
@@ -141,9 +141,18 @@ function transferToSpreadsheetDestination(rows) {
     }
   });
 
+  // 転記元の資産管理番号をMapに変換
+  const sourceAssetNumbers = new Map();
+  rows.forEach(row => {
+    if (row[0]) {
+      sourceAssetNumbers.set(row[0], true);
+    }
+  });
+
   let unprocessedRows = [];
   let processedRowCount = 0;
   let newRows = [];
+  let deletedRows = [];
 
   // 転記元の各行について処理
   for (const rowData of rows) {
@@ -173,6 +182,27 @@ function transferToSpreadsheetDestination(rows) {
       newRows.push(rowData);
     }
   }
+
+  // 転記先に存在するが転記元に存在しない行を削除
+  valuesB.forEach((value, index) => {
+    const assetNumber = value[0];
+    if (assetNumber && !sourceAssetNumbers.has(assetNumber)) {
+      deletedRows.push({
+        row: index + 4,
+        assetNumber: assetNumber
+      });
+    }
+  });
+
+  // 削除する行を逆順にソート（下から削除することで行番号のずれを防ぐ）
+  deletedRows.sort((a, b) => b.row - a.row);
+
+  // 行を削除
+  deletedRows.forEach(item => {
+    destinationSheet.deleteRow(item.row);
+    Logger.log(`削除された行: 資産管理番号 ${item.assetNumber} (行 ${item.row})`);
+    writeLogToSheet(`削除された行: 資産管理番号 ${item.assetNumber} (行 ${item.row})`);
+  });
 
   // 新しい代替機のデータを追加
   if (newRows.length > 0) {
