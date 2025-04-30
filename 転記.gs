@@ -58,10 +58,10 @@ function listColumnData() {
   // ヘッダーの内容をチェック
   checkHeader(values[0]);
 
-  // B列の内容がASから始まる行だけリスト化し、A列を除外
+  // B列に値がある行だけリスト化し、A列を除外
   const rows = [];
   for (let row = 0; row < values.length; row++) {
-    if (values[row][1] && values[row][1].startsWith('AS')) { // B列がASから始まる場合のみ追加
+    if (values[row][1] && values[row][1] !== "資産管理番号") { // B列に値があり、かつヘッダー行でない場合のみ追加
       const formattedRow = values[row].slice(1).map(formatValue); // A列を除外するためにslice(1)
       rows.push(formattedRow);
     }
