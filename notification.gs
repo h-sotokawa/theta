@@ -84,7 +84,7 @@ function onFormSubmit_notification(e) {
     const latestData = sheet.getRange(latestRowIndex, 1, 1, 11).getValues()[0];
     
     // メール送信先を取得
-    const recipientEmail = PropertiesService.getScriptProperties().getProperty('NOTIFICATION_EMAIL');
+    const recipientEmail = PropertiesService.getScriptProperties().getProperty('NOTIFICATION_EMAIL_OU');
     
     if (!recipientEmail) {
       writeLog_notification('データ監視', 'エラー', 'システム', 'メール送信先が設定されていません');
@@ -257,13 +257,13 @@ function checkFormSpreadsheetConnection() {
 
 // テスト実行用の関数
 function testFormSubmit() {
-  onFormSubmit();
+  onFormSubmit_notification();
 }
 
 // スクリプトプロパティの設定を確認する関数
 function checkScriptProperties() {
   const properties = PropertiesService.getScriptProperties();
-  const email = properties.getProperty('NOTIFICATION_EMAIL');
+  const email = properties.getProperty('NOTIFICATION_EMAIL_OU');
   
   if (!email) {
     writeLog_notification('設定確認', 'エラー', 'システム', 'メール送信先が設定されていません');
@@ -271,14 +271,3 @@ function checkScriptProperties() {
     writeLog_notification('設定確認', '成功', email, '現在の通知メールアドレスを確認しました');
   }
 }
-
-// スクリプトプロパティを設定する関数
-function setNotificationEmail(email) {
-  if (!email) {
-    writeLog_notification('メール設定', 'エラー', 'システム', 'メールアドレスが指定されていません');
-    return;
-  }
-  
-  PropertiesService.getScriptProperties().setProperty('NOTIFICATION_EMAIL', email);
-  writeLog_notification('メール設定', '成功', email, '通知メールアドレスを設定しました');
-} 
