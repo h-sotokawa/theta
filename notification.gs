@@ -147,7 +147,7 @@ function onFormSubmit_notification(e) {
     message += `</table>`;
     
     // メールの件名と本文を作成
-    const subject = '代替機 : ステータス変更通知';
+    const subject = `代替機 : ステータス変更通知 [${latestData[2]}]`;
     const spreadsheetUrl = ss.getUrl() + '#gid=' + sheet.getSheetId();
     const body = message + 
       `\n\n詳細はスプレッドシートをご確認ください。\n` +
