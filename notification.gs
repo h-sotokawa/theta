@@ -85,10 +85,15 @@ function onFormSubmit_notification(e) {
     
     // メール送信先を取得
     const recipientEmail = PropertiesService.getScriptProperties().getProperty('NOTIFICATION_EMAIL_OU');
+    const ccEmail = PropertiesService.getScriptProperties().getProperty('NOTIFICATION_EMAIL');
     
     if (!recipientEmail) {
       writeLog_notification('データ監視', 'エラー', 'システム', 'メール送信先が設定されていません');
       return;
+    }
+    
+    if (!ccEmail) {
+      writeLog_notification('データ監視', '警告', 'システム', 'CCメールアドレスが設定されていません');
     }
     
     // 型番の表示を設定
@@ -100,31 +105,63 @@ function onFormSubmit_notification(e) {
     // メール本文を作成
     let message = 
       `【${latestData[2]}】のステータスが変更されました。\n\n` +
-      `型番：${modelNumber}\n` +
-      `ステータス：${latestData[3]}\n` +
-      `変更日時：${Utilities.formatDate(latestData[6], 'Asia/Tokyo', 'yyyy/MM/dd HH:mm')}\n` +
-      `変更者：${latestData[7]}`;
+      `<table style="border-collapse: collapse; width: 100%;">` +
+      `<tr style="background-color: #f2f2f2;">` +
+      `<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">項目</th>` +
+      `<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">内容</th>` +
+      `</tr>` +
+      `<tr>` +
+      `<td style="border: 1px solid #ddd; padding: 8px;">型番</td>` +
+      `<td style="border: 1px solid #ddd; padding: 8px;">${modelNumber}</td>` +
+      `</tr>` +
+      `<tr>` +
+      `<td style="border: 1px solid #ddd; padding: 8px;">ステータス</td>` +
+      `<td style="border: 1px solid #ddd; padding: 8px;">${latestData[3]}</td>` +
+      `</tr>` +
+      `<tr>` +
+      `<td style="border: 1px solid #ddd; padding: 8px;">変更日時</td>` +
+      `<td style="border: 1px solid #ddd; padding: 8px;">${Utilities.formatDate(latestData[6], 'Asia/Tokyo', 'yyyy/MM/dd HH:mm')}</td>` +
+      `</tr>` +
+      `<tr>` +
+      `<td style="border: 1px solid #ddd; padding: 8px;">変更者</td>` +
+      `<td style="border: 1px solid #ddd; padding: 8px;">${latestData[7]}</td>` +
+      `</tr>`;
     
-    // ステータスが"貸出"を含む場合のみ備考と預かり証No.を追加
+    // ステータスが"貸出"を含む場合のみ備考、預かり証No.、貸出先を追加
     if (isRental) {
-      message += `\n備考：${latestData[8]}\n` +
-                `預かり証No.：${latestData[9] || "未設定"}`;
+      message += 
+        `<tr>` +
+        `<td style="border: 1px solid #ddd; padding: 8px;">貸出先</td>` +
+        `<td style="border: 1px solid #ddd; padding: 8px;">${latestData[4]} 様</td>` +
+        `</tr>` +
+        `<tr>` +
+        `<td style="border: 1px solid #ddd; padding: 8px;">備考</td>` +
+        `<td style="border: 1px solid #ddd; padding: 8px;">${latestData[8]}</td>` +
+        `</tr>` +
+        `<tr>` +
+        `<td style="border: 1px solid #ddd; padding: 8px;">預かり証No.</td>` +
+        `<td style="border: 1px solid #ddd; padding: 8px;">${latestData[9] || "未設定"}</td>` +
+        `</tr>`;
     }
+    
+    message += `</table>`;
     
     // メールの件名と本文を作成
     const subject = '代替機 : ステータス変更通知';
     const spreadsheetUrl = ss.getUrl() + '#gid=' + sheet.getSheetId();
     const body = message + 
-      `\n\n詳細はスプレッドシートでご確認ください。\n` +
-      `URL：${spreadsheetUrl}`;
+      `\n\n詳細はスプレッドシートをご確認ください。\n` +
+      `\nURL：${spreadsheetUrl}`;
     
     writeLog_notification('データ監視', '送信準備', recipientEmail, 'メール送信を試みます');
     
     // メールを送信
     MailApp.sendEmail({
       to: recipientEmail,
+      cc: ccEmail,
       subject: subject,
-      body: body
+      body: body,
+      htmlBody: body  // HTML形式でメールを送信
     });
     
     writeLog_notification('データ監視', '成功', recipientEmail, 'メール送信が完了しました');
