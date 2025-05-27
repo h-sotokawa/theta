@@ -30,7 +30,14 @@ const STATUS_CONSTANTS = {
  * メイン実行関数：全拠点のステータスを集計してサマリーシートに記入
  */
 function aggregateAllLocationStatusMain() {
+  const startTime = new Date();
   console.log('===== ステータス集計処理開始 =====');
+  
+  let executionResult = '正常';
+  let errorMessage = '';
+  let errorCount = 0;
+  let warningCount = 0;
+  const errorDetails = [];
   
   try {
     // 集計結果を格納するオブジェクト
@@ -57,19 +64,50 @@ function aggregateAllLocationStatusMain() {
         
       } catch (error) {
         console.error(`拠点「${locationKey}」の処理中にエラーが発生:`, error.message);
+        errorCount++;
+        errorDetails.push(`${locationKey}: ${error.message}`);
         // エラーが発生した拠点はスキップして続行
         continue;
       }
     }
     
+    // 実行結果を判定
+    if (errorCount > 0) {
+      if (errorCount === locations.length) {
+        executionResult = 'CRITICAL';
+        errorMessage = `全拠点でエラー発生 (${errorCount}件)`;
+      } else {
+        executionResult = 'WARNING';
+        errorMessage = `一部拠点でエラー発生 (${errorCount}/${locations.length}件)`;
+      }
+    }
+    
     // サマリーシートに結果を記入
-    writeToSummarySheet(aggregatedData);
+    const endTime = new Date();
+    writeToSummarySheet(aggregatedData, startTime, endTime, executionResult, errorMessage, errorDetails);
     
     console.log('===== ステータス集計処理完了 =====');
     console.log('集計結果:', aggregatedData);
     
+    if (errorCount > 0) {
+      console.log(`実行結果: ${executionResult} - ${errorMessage}`);
+      console.log('エラー詳細:', errorDetails);
+    }
+    
   } catch (error) {
+    const endTime = new Date();
+    executionResult = 'CRITICAL';
+    errorMessage = `処理全体でエラー: ${error.message}`;
+    
     console.error('ステータス集計処理中にエラーが発生:', error.message);
+    
+    // エラーが発生してもサマリーシートに実行ログは記録する
+    try {
+      writeExecutionLogToSummarySheet(startTime, endTime, executionResult, errorMessage, [errorMessage]);
+    } catch (logError) {
+      console.error('実行ログの記録中にエラーが発生:', logError.message);
+    }
+    
     throw error;
   }
 }
@@ -283,8 +321,13 @@ function getStatusCountsFromSheet(spreadsheetId) {
 /**
  * サマリーシートに集計結果を記入
  * @param {Object} aggregatedData - 集計されたデータ
+ * @param {Date} startTime - 実行開始時間
+ * @param {Date} endTime - 実行終了時間
+ * @param {string} executionResult - 実行結果（'正常', 'WARNING', 'CRITICAL'）
+ * @param {string} errorMessage - エラーメッセージ
+ * @param {Array} errorDetails - エラー詳細リスト
  */
-function writeToSummarySheet(aggregatedData) {
+function writeToSummarySheet(aggregatedData, startTime, endTime, executionResult, errorMessage, errorDetails = []) {
   try {
     // 設定から宛先スプレッドシートIDを取得
     const scriptProperties = PropertiesService.getScriptProperties();
@@ -302,11 +345,8 @@ function writeToSummarySheet(aggregatedData) {
       summarySheet = createSummarySheet(destinationSpreadsheet);
     }
     
-    // 現在の日時を取得
-    const currentDateTime = new Date();
-    
     // サマリーシートにデータを記入
-    updateSummarySheetData(summarySheet, aggregatedData, currentDateTime);
+    updateSummarySheetData(summarySheet, aggregatedData, startTime, endTime, executionResult, errorMessage, errorDetails);
     
     console.log('サマリーシートへの記入が完了しました');
     
@@ -337,7 +377,7 @@ function createSummarySheet(spreadsheet) {
  * @param {Sheet} summarySheet - サマリーシート
  */
 function setupSummarySheetStructure(summarySheet) {
-  let currentRow = 2; // 1行目を空ける
+  let currentRow = 2; // 1行目は実行ログ用、2行目からデータ開始
   
   // 各ステータスごとにセクションを作成
   for (let statusIndex = 0; statusIndex < STATUS_CONSTANTS.STATUSES.length; statusIndex++) {
@@ -375,25 +415,34 @@ function setupSummarySheetStructure(summarySheet) {
   }
   
   // 列幅を調整
-  summarySheet.setColumnWidth(1, 80);  // 拠点列
-  summarySheet.setColumnWidth(2, 120); // ステータス/SV列
-  summarySheet.setColumnWidth(3, 80);  // CL列
-  summarySheet.setColumnWidth(4, 80);  // プリンタ列
-  summarySheet.setColumnWidth(5, 80);  // その他列
+  summarySheet.setColumnWidth(1, 80);  // 拠点列/実行結果ラベル列
+  summarySheet.setColumnWidth(2, 150); // ステータス/SV列/実行結果値列
+  summarySheet.setColumnWidth(3, 80);  // CL列/実行時間ラベル列
+  summarySheet.setColumnWidth(4, 80);  // プリンタ列/実行時間値列
+  summarySheet.setColumnWidth(5, 80);  // その他列/最終実行ラベル列
+  summarySheet.setColumnWidth(6, 120); // 最終実行時刻列
 }
 
 /**
  * サマリーシートのデータを更新（画像の構造に合わせて）
  * @param {Sheet} summarySheet - サマリーシート
  * @param {Object} aggregatedData - 集計データ
- * @param {Date} currentDateTime - 現在日時
+ * @param {Date} startTime - 実行開始時間
+ * @param {Date} endTime - 実行終了時間
+ * @param {string} executionResult - 実行結果
+ * @param {string} errorMessage - エラーメッセージ
+ * @param {Array} errorDetails - エラー詳細リスト
  */
-function updateSummarySheetData(summarySheet, aggregatedData, currentDateTime) {
+function updateSummarySheetData(summarySheet, aggregatedData, startTime, endTime, executionResult, errorMessage, errorDetails = []) {
   // 既存のシートをクリアして再構築
   summarySheet.clear();
+  
+  // 1行目に実行ログを記録
+  writeExecutionLogToSheet(summarySheet, startTime, endTime, executionResult, errorMessage, errorDetails);
+  
   setupSummarySheetStructure(summarySheet);
   
-  let currentRow = 2; // 1行目を空ける
+  let currentRow = 2; // 1行目は実行ログ用、2行目からデータ開始
   
   // 各ステータスごとにデータを記入
   for (const status of STATUS_CONSTANTS.STATUSES) {
@@ -436,6 +485,110 @@ function updateSummarySheetData(summarySheet, aggregatedData, currentDateTime) {
   }
   
   console.log('サマリーシートのデータ更新が完了しました');
+}
+
+/**
+ * サマリーシートの1行目に実行ログを記録
+ * @param {Sheet} summarySheet - サマリーシート
+ * @param {Date} startTime - 実行開始時間
+ * @param {Date} endTime - 実行終了時間
+ * @param {string} executionResult - 実行結果
+ * @param {string} errorMessage - エラーメッセージ
+ * @param {Array} errorDetails - エラー詳細リスト
+ */
+function writeExecutionLogToSheet(summarySheet, startTime, endTime, executionResult, errorMessage, errorDetails = []) {
+  const executionTime = Math.round((endTime - startTime) / 1000); // 秒単位
+  const logMessage = errorMessage ? `${executionResult}: ${errorMessage}` : executionResult;
+  
+  // 1行目に実行ログを記録
+  summarySheet.getRange(1, 1).setValue('実行結果:');
+  summarySheet.getRange(1, 2).setValue(logMessage);
+  summarySheet.getRange(1, 3).setValue('実行時間:');
+  summarySheet.getRange(1, 4).setValue(`${executionTime}秒`);
+  summarySheet.getRange(1, 5).setValue('最終実行:');
+  summarySheet.getRange(1, 6).setValue(Utilities.formatDate(endTime, Session.getScriptTimeZone(), 'yyyy/MM/dd HH:mm:ss'));
+  
+  // エラー詳細がある場合は7列目以降に記録
+  if (errorDetails && errorDetails.length > 0) {
+    summarySheet.getRange(1, 7).setValue('エラー詳細:');
+    const detailsText = errorDetails.join(' | ');
+    summarySheet.getRange(1, 8).setValue(detailsText);
+    
+    // エラー詳細のヘッダーもスタイル設定
+    summarySheet.getRange(1, 7).setFontWeight('bold');
+    summarySheet.getRange(1, 7).setBackground('#f8f9fa');
+    
+    // エラー詳細の列幅を調整
+    summarySheet.setColumnWidth(8, 300);
+  }
+  
+  // 実行結果に応じて背景色を設定
+  const resultRange = summarySheet.getRange(1, 2);
+  switch (executionResult) {
+    case '正常':
+      resultRange.setBackground('#d4edda'); // 薄い緑
+      resultRange.setFontColor('#155724'); // 濃い緑
+      break;
+    case 'WARNING':
+      resultRange.setBackground('#fff3cd'); // 薄い黄色
+      resultRange.setFontColor('#856404'); // 濃い黄色
+      break;
+    case 'CRITICAL':
+      resultRange.setBackground('#f8d7da'); // 薄い赤
+      resultRange.setFontColor('#721c24'); // 濃い赤
+      break;
+    default:
+      resultRange.setBackground('#f8d7da'); // 薄い赤（デフォルト）
+      resultRange.setFontColor('#721c24'); // 濃い赤
+  }
+  
+  // ヘッダー部分のスタイル設定
+  const headerRanges = [
+    summarySheet.getRange(1, 1),
+    summarySheet.getRange(1, 3),
+    summarySheet.getRange(1, 5)
+  ];
+  
+  headerRanges.forEach(range => {
+    range.setFontWeight('bold');
+    range.setBackground('#f8f9fa');
+  });
+}
+
+/**
+ * エラー時専用：サマリーシートに実行ログのみを記録
+ * @param {Date} startTime - 実行開始時間
+ * @param {Date} endTime - 実行終了時間
+ * @param {string} executionResult - 実行結果
+ * @param {string} errorMessage - エラーメッセージ
+ * @param {Array} errorDetails - エラー詳細リスト
+ */
+function writeExecutionLogToSummarySheet(startTime, endTime, executionResult, errorMessage, errorDetails = []) {
+  try {
+    const scriptProperties = PropertiesService.getScriptProperties();
+    const destinationId = scriptProperties.getProperty('SPREADSHEET_ID_DESTINATION');
+    
+    if (!destinationId) {
+      throw new Error('SPREADSHEET_ID_DESTINATIONが設定されていません');
+    }
+    
+    const destinationSpreadsheet = SpreadsheetApp.openById(destinationId);
+    let summarySheet = destinationSpreadsheet.getSheetByName(STATUS_CONSTANTS.SUMMARY_SHEET_NAME);
+    
+    // サマリーシートが存在しない場合は作成
+    if (!summarySheet) {
+      summarySheet = createSummarySheet(destinationSpreadsheet);
+    }
+    
+    // 1行目に実行ログのみを記録
+    writeExecutionLogToSheet(summarySheet, startTime, endTime, executionResult, errorMessage, errorDetails);
+    
+    console.log('実行ログの記録が完了しました');
+    
+  } catch (error) {
+    console.error('実行ログの記録中にエラー:', error.message);
+    throw error;
+  }
 }
 
 /**
